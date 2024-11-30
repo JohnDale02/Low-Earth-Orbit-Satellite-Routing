@@ -5,5 +5,13 @@ gym_environments.egg-info/SOURCES.txt
 gym_environments.egg-info/dependency_links.txt
 gym_environments.egg-info/requires.txt
 gym_environments.egg-info/top_level.txt
+gym_environments/__pycache__/__init__.cpython-38.pyc
+gym_environments/__pycache__/__init__.cpython-39.pyc
 gym_environments/envs/__init__.py
+gym_environments/envs/create_iridium_graph.py
 gym_environments/envs/environment1.py
+gym_environments/envs/test1.py
+gym_environments/envs/__pycache__/__init__.cpython-38.pyc
+gym_environments/envs/__pycache__/__init__.cpython-39.pyc
+gym_environments/envs/__pycache__/environment1.cpython-38.pyc
+gym_environments/envs/__pycache__/environment1.cpython-39.pyc

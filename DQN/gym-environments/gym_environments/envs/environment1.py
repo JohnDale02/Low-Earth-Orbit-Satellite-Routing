@@ -13,7 +13,7 @@ import pylab
 import json 
 import gc
 import matplotlib.pyplot as plt
-from create_iridium_graph import create_iridium_graph
+from .create_iridium_graph import create_iridium_graph
 
 def create_geant2_graph():
     Gbase = nx.Graph()
@@ -138,11 +138,16 @@ class Env1(gym.Env):
         self.edgesDict = None
         self.numNodes = None
         self.numEdges = None
+        self.subset_nodes = []
 
         self.state = None
         self.episode_over = True
         self.reward = 0
+        self.bw = 0
+        self.delay = 0 
         self.allPaths = dict()
+
+
 
     def seed(self, seed):
         random.seed(seed)
@@ -184,16 +189,6 @@ class Env1(gym.Env):
                     # Remove paths not needed
                     del self.allPaths[str(n1)+':'+str(n2)][path:len(self.allPaths[str(n1)+':'+str(n2)])]
                     gc.collect()
-
-    def generate_traffic(self):
-        # Example: Generate random traffic demands
-        traffic = []
-        for _ in range(100):  # Number of traffic demands
-            demand = random.choice(self.listofDemands)
-            source = random.choice(list(self.graph.nodes))
-            destination = random.choice([node for node in self.graph.nodes if node != source])
-            traffic.append((demand, source, destination))
-        return traffic
 
     def _first_second_between(self):
         self.first = list()
@@ -264,7 +259,6 @@ class Env1(gym.Env):
         # We create the list of nodes ids to pick randomly from them
         # FOR OUR EXPERIMENT WE WILL PICK 6 RANDOMLY
         self.nodes = list(range(0,self.numNodes))
-       #  self.traffic = self.generate_traffic() #  Creates list of 100 [(rand_demand, source, dest)... truples 
 
     def utility_function(self, bw, delay, alpha=0.9, lambda_weight=1.0):
         U_bw = (bw ** (1 - alpha)) / (1 - alpha)
@@ -294,15 +288,13 @@ class Env1(gym.Env):
         j = 1
         currentPath = self.allPaths[str(source) +':'+ str(destination)][action]
 
-        print("Current Path: ",  currentPath)
-
         # Once we pick the action, we decrease the total edge capacity from the edges
         # from the allocated path (action path)
         while (j < len(currentPath)):
             self.graph_state[self.edgesDict[str(currentPath[i]) + ':' + str(currentPath[j])]][0] -= demand
             if self.graph_state[self.edgesDict[str(currentPath[i]) + ':' + str(currentPath[j])]][0] < 0:
                 # FINISH IF LINKS CAPACITY <0
-                return self.graph_state, self.reward, self.episode_over, self.demand, self.source, self.destination 
+                return self.graph_state, self.reward, self.episode_over, self.demand, self.source, self.destination, self.bw, self.delay
             i = i + 1
             j = j + 1
 
@@ -312,23 +304,28 @@ class Env1(gym.Env):
         # Reward is the allocated demand or 0 otherwise (end of episode)
         # We normalize the demand to don't have extremely large values
          # Reward calculation based on the utility function
-        bw = demand / self.max_demand  # Normalize bandwidth 
-        delay = len(currentPath) / (self.numNodes // 2)  # Normalize delay  # TODO: Should it be len - 1??
-
+        self.bw = demand / self.max_demand  # Normalize bandwidth 
+        self.delay = len(currentPath) / (self.numNodes // 2)  # Normalize delay
        
-        self.reward = self.utility_function(bw, delay)
+        self.reward = self.utility_function(self.bw, self.delay)
         self.episode_over = False
 
         self.demand = random.choice(self.listofDemands)
-        self.source = random.choice(self.subset_nodes)
 
-        # We pick a pair of SOURCE,DESTINATION different nodes
-        while True:
-            self.destination = random.choice(self.subset_nodes)
-            if self.destination != self.source:
-                break
+        if self.subset_nodes != []:
+            self.source = random.choice(self.subset_nodes)
 
-        return self.graph_state, self.reward, self.episode_over, self.demand, self.source, self.destination
+            # We pick a pair of SOURCE,DESTINATION different nodes
+            while True:
+                self.destination = random.choice(self.subset_nodes)
+                if self.destination != self.source:
+                    break
+        else:
+            self.demand = 0
+            self.source = 0
+            self.destination = 0
+
+        return self.graph_state, self.reward, self.episode_over, self.demand, self.source, self.destination, self.bw, self.delay
 
     def reset(self):
         """
@@ -337,6 +334,8 @@ class Env1(gym.Env):
         Returns:
             initial state of reset environment, a new demand and a source and destination node
         """
+        self.bw = 0
+        self.delay = 0
         self.graph_state = np.copy(self.initial_state)
         self.subset_nodes = random.sample(self.nodes, 6)
 
@@ -352,7 +351,10 @@ class Env1(gym.Env):
         """
         Reset environment and setup for new episode. This function is used in the "evaluate_DQN.py" script.
         """
+        self.bw = 0
+        self.delay = 0
         self.graph_state = np.copy(self.initial_state)
+
         self.demand = demand
         self.source = source
         self.destination = destination

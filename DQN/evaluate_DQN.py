@@ -31,22 +31,9 @@ NUMBER_EPISODES = 50
 NUM_SAMPLES_EPSD = 100
 
 # Set evaluation topology
-graph_topology = 4 # 0==NSFNET, 1==GEANT2, 2==Small Topology, 3==GBN, 4 == Iridium (66 satellites, 6 orbits)
+graph_topology = 0 # 0==NSFNET, 1==GEANT2, 2==Small Topology, 3==GBN, 4 == Iridium (66 satellites, 6 orbits)
 listofDemands = [16, 32, 64]
 
-'''
-hparams = {  # OLD hparams for Neural netwrok model not based on paper
-    'l2': 0.1,
-    'dropout_rate': 0.01,
-    'link_state_dim': 20,
-    'readout_units': 35,
-    'learning_rate': 0.0001,
-    'batch_size': 32,
-    'T': 12,  # NUM OF MESSAGE PASSING ITERATIONS (MODIFIED FROM 4)
-    'num_demands': len(listofDemands)
-}
-
-'''
 
 hparams = {
     'l2': 0.1,
@@ -203,10 +190,7 @@ class DQNAgent:
 
         # We get the K-paths between source-destination
         pathList = env.allPaths[str(source) +':'+ str(destination)]
-
-        #for count, path in enumerate(pathList):
-        #    print(f"path {count} in pathlist: {pathList}")   # K-path between source and destination
-        #path = 0
+        path = 0
 
         # 1. Implement epsilon-greedy to pick allocation
         # If flagEvaluation==TRUE we are EVALUATING => take always the action that the agent is saying has higher q-value
@@ -327,6 +311,8 @@ def exec_lb_model_episodes(experience_memory, graph_topology):
 
     agent = LBAgent()
     rewards_lb = np.zeros(NUMBER_EPISODES)
+    bw_average_list = np.zeros(NUMBER_EPISODES)
+    delay_average_list = np.zeros(NUMBER_EPISODES)
 
     rewardAdd = 0
     reward_it = 0
@@ -343,7 +329,7 @@ def exec_lb_model_episodes(experience_memory, graph_topology):
             state = env_lb.eval_sap_reset(demand, source, destination)
 
             action = agent.act(env_lb, state, demand, source, destination)
-            new_state, reward, done, _, _, _ = env_lb.make_step(state, action, demand, source, destination)
+            new_state, reward, done, _, _, _, bw, delay = env_lb.make_step(state, action, demand, source, destination)
             env_lb.demand = demand
             env_lb.source = source
             env_lb.destination = destination
@@ -352,6 +338,8 @@ def exec_lb_model_episodes(experience_memory, graph_topology):
 
             if done:
                 rewards_lb[reward_it] = rewardAdd
+                bw_average_list[reward_it] = bw
+                delay_average_list[reward_it] = delay
                 reward_it = reward_it + 1
                 wait_for_new_episode = True
 
@@ -365,7 +353,7 @@ def exec_lb_model_episodes(experience_memory, graph_topology):
             source = experience_memory[iter_episode][2]
             destination = experience_memory[iter_episode][3]
             action = agent.act(env_lb, state, demand, source, destination)
-            new_state, reward, done, _, _, _ = env_lb.make_step(state, action, demand, source, destination)
+            new_state, reward, done, _, _, _, bw, delay = env_lb.make_step(state, action, demand, source, destination)
             env_lb.demand = demand
             env_lb.source = source
             env_lb.destination = destination
@@ -374,6 +362,8 @@ def exec_lb_model_episodes(experience_memory, graph_topology):
 
             if done:
                 rewards_lb[reward_it] = rewardAdd
+                bw_average_list[reward_it] = bw
+                delay_average_list[reward_it] = delay
                 reward_it = reward_it + 1
                 wait_for_new_episode = True
 
@@ -384,7 +374,8 @@ def exec_lb_model_episodes(experience_memory, graph_topology):
             new_episode = True
             new_episode_it = new_episode_it + 1
             iter_episode = new_episode_it*NUM_SAMPLES_EPSD
-    return rewards_lb
+
+    return rewards_lb, bw_average_list, delay_average_list
 
 def exec_sap_model_episodes(experience_memory, graph_topology):
     env_sap = gym.make(ENV_NAME)
@@ -393,6 +384,9 @@ def exec_sap_model_episodes(experience_memory, graph_topology):
 
     agent = SAPAgent()
     rewards_sap = np.zeros(NUMBER_EPISODES)
+    bw_average_list = np.zeros(NUMBER_EPISODES)
+    delay_average_list = np.zeros(NUMBER_EPISODES)
+
 
     rewardAdd = 0
     reward_it = 0
@@ -409,7 +403,7 @@ def exec_sap_model_episodes(experience_memory, graph_topology):
             state = env_sap.eval_sap_reset(demand, source, destination)
 
             action = agent.act(env_sap, state, demand, source, destination)
-            new_state, reward, done, _, _, _ = env_sap.make_step(state, action, demand, source, destination)
+            new_state, reward, done, _, _, _, bw, delay = env_sap.make_step(state, action, demand, source, destination)
             env_sap.demand = demand
             env_sap.source = source
             env_sap.destination = destination
@@ -418,6 +412,8 @@ def exec_sap_model_episodes(experience_memory, graph_topology):
 
             if done:
                 rewards_sap[reward_it] = rewardAdd
+                bw_average_list[reward_it] = bw
+                delay_average_list[reward_it] = delay
                 reward_it = reward_it + 1
                 wait_for_new_episode = True
 
@@ -431,7 +427,7 @@ def exec_sap_model_episodes(experience_memory, graph_topology):
             source = experience_memory[iter_episode][2]
             destination = experience_memory[iter_episode][3]
             action = agent.act(env_sap, state, demand, source, destination)
-            new_state, reward, done, _, _, _ = env_sap.make_step(state, action, demand, source, destination)
+            new_state, reward, done, _, _, _, bw, delay = env_sap.make_step(state, action, demand, source, destination)
             env_sap.demand = demand
             env_sap.source = source
             env_sap.destination = destination
@@ -440,6 +436,8 @@ def exec_sap_model_episodes(experience_memory, graph_topology):
 
             if done:
                 rewards_sap[reward_it] = rewardAdd
+                bw_average_list[reward_it] = bw
+                delay_average_list[reward_it] = delay
                 reward_it = reward_it + 1
                 wait_for_new_episode = True
 
@@ -450,10 +448,13 @@ def exec_sap_model_episodes(experience_memory, graph_topology):
             new_episode = True
             new_episode_it = new_episode_it + 1
             iter_episode = new_episode_it * NUM_SAMPLES_EPSD
-    return rewards_sap
+
+    return rewards_sap, bw_average_list, delay_average_list
 
 def exec_dqn_model_episodes(experience_memory, env_dqn, agent):
     rewards_dqn = np.zeros(NUMBER_EPISODES)
+    bw_average_list = np.zeros(NUMBER_EPISODES)
+    delay_average_list = np.zeros(NUMBER_EPISODES)
 
     rewardAdd = 0
     reward_it = 0
@@ -470,13 +471,16 @@ def exec_dqn_model_episodes(experience_memory, env_dqn, agent):
             state = env_dqn.eval_sap_reset(demand, source, destination)
 
             action, state_action = agent.act(env_dqn, state, demand, source, destination, True)
-            new_state, reward, done, new_demand, new_source, new_destination = env_dqn.make_step(state, action, demand, source, destination)
+            new_state, reward, done, new_demand, new_source, new_destination, bw, delay = env_dqn.make_step(state, action, demand, source, destination)
             rewardAdd = rewardAdd + reward
             state = new_state
             if done:
                 rewards_dqn[reward_it] = rewardAdd
+                bw_average_list[reward_it] = bw
+                delay_average_list[reward_it] = delay
                 reward_it = reward_it + 1
                 wait_for_new_episode = True
+
             iter_episode = iter_episode + 1
         else:
             if experience_memory[iter_episode][0] != new_episode_it:
@@ -488,11 +492,13 @@ def exec_dqn_model_episodes(experience_memory, env_dqn, agent):
             destination = experience_memory[iter_episode][3]
 
             action, state_action = agent.act(env_dqn, state, demand, source, destination, True)
-            new_state, reward, done, new_demand, new_source, new_destination = env_dqn.make_step(state, action, demand, source, destination)
+            new_state, reward, done, new_demand, new_source, new_destination, bw, delay = env_dqn.make_step(state, action, demand, source, destination)
             rewardAdd = rewardAdd + reward
             state = new_state
             if done:
                 rewards_dqn[reward_it] = rewardAdd
+                bw_average_list[reward_it] = bw
+                delay_average_list[reward_it] = delay
                 reward_it = reward_it + 1
                 wait_for_new_episode = True
             iter_episode = iter_episode + 1
@@ -504,7 +510,7 @@ def exec_dqn_model_episodes(experience_memory, env_dqn, agent):
             if new_episode_it%5==0:
                 print("DQN Episode >>> ", new_episode_it)
             iter_episode = new_episode_it * NUM_SAMPLES_EPSD
-    return rewards_dqn
+    return rewards_dqn, bw_average_list, delay_average_list
 
 if __name__ == "__main__":
     # python evaluate_DQN.py -d ./Logs/expsample_DQN_agentLogs.txt
@@ -529,8 +535,11 @@ if __name__ == "__main__":
         topo = "GEANT2"
     elif graph_topology==2:
         topo = "Small_Top"
-    else:
+    elif graph_topology == 3:
         topo = "GBN"
+    else:
+        topo = "Iridium"
+
 
     # Uncomment the following if you want to store the demands in a file
     # store_experiences = open("Traffic_demands_"+topo+"_1K.txt", "w")
@@ -585,12 +594,40 @@ if __name__ == "__main__":
 
     # store_experiences.close()
 
-    rewards_lb = exec_lb_model_episodes(experience_memory, graph_topology)
-    rewards_sap = exec_sap_model_episodes(experience_memory, graph_topology)
-    rewards_dqn = exec_dqn_model_episodes(experience_memory, env_dqn, dqn_agent)
+    rewards_lb, lb_bw_list, lb_delay_list = exec_lb_model_episodes(experience_memory, graph_topology)
+    rewards_sap, sap_bw_list, sap_delay_list = exec_sap_model_episodes(experience_memory, graph_topology)
+    rewards_dqn, dqn_bw_list, dqn_delay_list = exec_dqn_model_episodes(experience_memory, env_dqn, dqn_agent)
 
     #rewards_lb.tofile('rewards_lb'+topo+'1K.dat')
     #rewards_dqn.tofile('rewards_dqn'+topo+'1K.dat')
+    # Compute averages
+    sap_avg = np.mean(sap_bw_list)
+    lb_avg = np.mean(lb_bw_list)
+    dqn_avg = np.mean(dqn_bw_list)
+
+    sap_avg_delay = np.mean(sap_delay_list)
+    lb_avg_delay = np.mean(lb_delay_list)
+    dqn_avg_delay = np.mean(dqn_delay_list)
+
+    print("--------------- BW ----------------")
+    print(lb_bw_list)
+    print(sap_bw_list)
+    print(dqn_bw_list)
+
+    print("--------------- DELAY ----------------")
+    print(lb_delay_list)
+    print(sap_delay_list)
+    print(dqn_delay_list)
+
+    print(f"SAP BW Avg: {sap_avg}")
+    print(f"LB BW Avg: {lb_avg}")
+    print(f"DQN BW Avg: {dqn_avg}")
+
+    print(f"SAP Delay Avg: {sap_avg_delay}")
+    print(f"LB Delay Avg: {lb_avg_delay}")
+    print(f"DQN Delay Avg: {dqn_avg_delay}")
+
+
 
     plt.rcParams.update({'font.size': 12})
     plt.plot(rewards_dqn, 'r', label="DQN")
