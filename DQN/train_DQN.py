@@ -11,6 +11,7 @@ import sys
 import gym_environments
 import random
 import mpnn as gnn
+#import mpnn_new as gnn  # MODIFIED GNN IMPORT TO UPDATED MODEL
 import tensorflow as tf
 from collections import deque
 import multiprocessing
@@ -20,11 +21,13 @@ import glob
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # Disabling GPU for training 
 
 ENV_NAME = 'GraphEnv-v1'
-graph_topology = 0 # 0==NSFNET, 1==GEANT2, 2==Small Topology, 3==GBN
+
+# MOST MODIFIED TO MATCH THE PAPER
+graph_topology = 4 # 0==NSFNET, 1==GEANT2, 2==Small Topology, 3==GBN, 4 = Iridium (used in paper)
 SEED = 37
-ITERATIONS = 10000
-TRAINING_EPISODES = 20
-EVALUATION_EPISODES = 40
+ITERATIONS = 2000  # MODIFIED FROM 10000 (normally 2000 - 5000)
+TRAINING_EPISODES = 10
+EVALUATION_EPISODES = 10
 FIRST_WORK_TRAIN_EPISODE = 60
 
 MULTI_FACTOR_BATCH = 6 # Number of batches used in training
@@ -48,7 +51,7 @@ tf.random.set_seed(1)
 
 train_dir = "./TensorBoard/"+differentiation_str
 summary_writer = tf.summary.create_file_writer(train_dir)   # ADDED
-listofDemands = [8, 32, 64]
+listofDemands = [16, 32, 64] #] MODIFIED FROM [8, 32, 64]
 copy_weights_interval = 50
 evaluation_interval = 20
 epsilon_start_decay = 70
@@ -61,9 +64,10 @@ hparams = {
     'readout_units': 35,
     'learning_rate': 0.0001,
     'batch_size': 32,
-    'T': 4, 
+    'T': 12,    # MESSAGE PASSING ITERATIONS Changed from 4
     'num_demands': len(listofDemands)
 }
+
 
 MAX_QUEUE_SIZE = 4000
 
@@ -446,7 +450,6 @@ if __name__ == "__main__":
 
         # Decrease epsilon (from epsion-greedy exploration strategy)
         if ep_it > epsilon_start_decay and agent.epsilon > agent.epsilon_min:
-            agent.epsilon *= agent.epsilon_decay
             agent.epsilon *= agent.epsilon_decay
 
         # We only evaluate the model every evaluation_interval steps

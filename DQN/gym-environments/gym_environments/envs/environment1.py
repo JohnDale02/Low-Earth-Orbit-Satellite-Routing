@@ -13,6 +13,7 @@ import pylab
 import json 
 import gc
 import matplotlib.pyplot as plt
+from create_iridium_graph import create_iridium_graph
 
 def create_geant2_graph():
     Gbase = nx.Graph()
@@ -54,7 +55,6 @@ def create_gbn_graph():
     return Gbase
 
 
-
 def generate_nx_graph(topology):
     """
     Generate graphs for training with the same topology.
@@ -65,8 +65,10 @@ def generate_nx_graph(topology):
         G = create_geant2_graph()
     elif topology == 2:
         G = create_small_top()
-    else:
+    elif topology == 3:
         G = create_gbn_graph()
+    else:  # == 4 
+        G = create_iridium_graph()  # OUR CUSTOM GRAPH FOR THE IRIDIUM SATELLITE CONSTELATION
 
     # nx.draw(G, with_labels=True)
     # plt.show()
@@ -80,7 +82,7 @@ def generate_nx_graph(topology):
         G.get_edge_data(i, j)['betweenness'] = 0
         G.get_edge_data(i, j)['numsp'] = 0  # Indicates the number of shortest paths going through the link
         # We set the edges capacities to 200
-        G.get_edge_data(i, j)["capacity"] = float(200)
+        G.get_edge_data(i, j)["capacity"] = float(200)     # BANDWIDTH FOR ALL EDGES SET TO 200 
         G.get_edge_data(i, j)['bw_allocated'] = 0
         incId = incId + 1
 
@@ -239,16 +241,19 @@ class Env1(gym.Env):
         self.between_feature = np.zeros(self.numEdges)
 
         position = 0
-        for edge in self.ordered_edges:
+        for edge in self.ordered_edges:\
+            # adding all the edge state (betweeness, capacity to graph_state)
+            # creating an itital state
             i = edge[0]
             j = edge[1]
             self.edgesDict[str(i)+':'+str(j)] = position
             self.edgesDict[str(j)+':'+str(i)] = position
             betweenness = (self.graph.get_edge_data(i, j)['betweenness'] - self.mu_bet) / self.std_bet
-            self.graph.get_edge_data(i, j)['betweenness'] = betweenness
+            self.graph.get_edge_data(i, j)['betweennes'] = betweenness
             self.graph_state[position][0] = self.graph.get_edge_data(i, j)["capacity"]
             self.between_feature[position] = self.graph.get_edge_data(i, j)['betweenness']
             position = position + 1
+
 
         self.initial_state = np.copy(self.graph_state)
 
@@ -257,10 +262,30 @@ class Env1(gym.Env):
         self.firstTrueSize = len(self.first)
 
         # We create the list of nodes ids to pick randomly from them
+        # FOR OUR EXPERIMENT WE WILL PICK 6 RANDOMLY
         self.nodes = list(range(0,self.numNodes))
-        self.traffic = self.generate_traffic()
+       #  self.traffic = self.generate_traffic() #  Creates list of 100 [(rand_demand, source, dest)... truples 
+
+    def utility_function(self, bw, delay, alpha=0.9, lambda_weight=1.0):
+        U_bw = (bw ** (1 - alpha)) / (1 - alpha)
+        U_delay = (delay ** (1 - alpha)) / (1 - alpha)
+        return U_bw - lambda_weight * U_delay
 
     def make_step(self, state, action, demand, source, destination):
+        """
+        Perform a step in the environment by selecting a path and allocating the required bandwidth.
+
+        Args:
+            state: Current state of the graph.
+            action: The index of the selected path.
+            demand: Bandwidth required for the transmission.
+            source: Source node for the transmission.
+            destination: Destination node for the transmission.
+
+        Returns:
+            Updated graph state, reward for the step, whether the episode is over, 
+            new demand, new source, and new destination.
+        """
         self.graph_state = np.copy(state)
         self.episode_over = True
         self.reward = 0
@@ -268,6 +293,8 @@ class Env1(gym.Env):
         i = 0
         j = 1
         currentPath = self.allPaths[str(source) +':'+ str(destination)][action]
+
+        print("Current Path: ",  currentPath)
 
         # Once we pick the action, we decrease the total edge capacity from the edges
         # from the allocated path (action path)
@@ -279,20 +306,25 @@ class Env1(gym.Env):
             i = i + 1
             j = j + 1
 
-        # Leave the bw_allocated back to 0
+        # Leave the bw_allocated back to 0 --> send all requests 
         self.graph_state[:,1] = 0
 
         # Reward is the allocated demand or 0 otherwise (end of episode)
         # We normalize the demand to don't have extremely large values
-        self.reward = demand/self.max_demand
+         # Reward calculation based on the utility function
+        bw = demand / self.max_demand  # Normalize bandwidth 
+        delay = len(currentPath) / (self.numNodes // 2)  # Normalize delay  # TODO: Should it be len - 1??
+
+       
+        self.reward = self.utility_function(bw, delay)
         self.episode_over = False
 
         self.demand = random.choice(self.listofDemands)
-        self.source = random.choice(self.nodes)
+        self.source = random.choice(self.subset_nodes)
 
         # We pick a pair of SOURCE,DESTINATION different nodes
         while True:
-            self.destination = random.choice(self.nodes)
+            self.destination = random.choice(self.subset_nodes)
             if self.destination != self.source:
                 break
 
@@ -306,13 +338,11 @@ class Env1(gym.Env):
             initial state of reset environment, a new demand and a source and destination node
         """
         self.graph_state = np.copy(self.initial_state)
-        self.demand = random.choice(self.listofDemands)
-        self.source = random.choice(self.nodes)
-        self.traffic = self.generate_traffic()  # Refresh traffic
+        self.subset_nodes = random.sample(self.nodes, 6)
 
         # We pick a pair of SOURCE,DESTINATION different nodes
         while True:
-            self.destination = random.choice(self.nodes)
+            self.destination = random.choice(self.subset_nodes)
             if self.destination != self.source:
                 break
 

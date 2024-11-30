@@ -31,8 +31,22 @@ NUMBER_EPISODES = 50
 NUM_SAMPLES_EPSD = 100
 
 # Set evaluation topology
-graph_topology = 2 # 0==NSFNET, 1==GEANT2, 2==Small Topology, 3==GBN
-listofDemands = [8, 32, 64]
+graph_topology = 4 # 0==NSFNET, 1==GEANT2, 2==Small Topology, 3==GBN, 4 == Iridium (66 satellites, 6 orbits)
+listofDemands = [16, 32, 64]
+
+'''
+hparams = {  # OLD hparams for Neural netwrok model not based on paper
+    'l2': 0.1,
+    'dropout_rate': 0.01,
+    'link_state_dim': 20,
+    'readout_units': 35,
+    'learning_rate': 0.0001,
+    'batch_size': 32,
+    'T': 12,  # NUM OF MESSAGE PASSING ITERATIONS (MODIFIED FROM 4)
+    'num_demands': len(listofDemands)
+}
+
+'''
 
 hparams = {
     'l2': 0.1,
@@ -41,9 +55,10 @@ hparams = {
     'readout_units': 35,
     'learning_rate': 0.0001,
     'batch_size': 32,
-    'T': 4, 
+    'T': 12,    # MESSAGE PASSING ITERATIONS Changed from 4
     'num_demands': len(listofDemands)
 }
+
 
 class SAPAgent:
     # Shortest Available Path
@@ -152,12 +167,12 @@ def cummax(alist, extractor):
 
 class DQNAgent:
     def __init__(self, env_nsfnet):
-        self.gamma = 0.95  # discount rate
+        self.gamma = 0.90  # discount rate MODIFIED FROM .95
         self.epsilon = 1.0  # exploration rate
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.writer = None
-        self.K = 4
+        self.K = 5   # MODIFIED FROM 4
         self.listQValues = None
         self.action = None
         self.capacity_feature = None
@@ -188,7 +203,10 @@ class DQNAgent:
 
         # We get the K-paths between source-destination
         pathList = env.allPaths[str(source) +':'+ str(destination)]
-        path = 0
+
+        #for count, path in enumerate(pathList):
+        #    print(f"path {count} in pathlist: {pathList}")   # K-path between source and destination
+        #path = 0
 
         # 1. Implement epsilon-greedy to pick allocation
         # If flagEvaluation==TRUE we are EVALUATING => take always the action that the agent is saying has higher q-value
@@ -602,3 +620,6 @@ if __name__ == "__main__":
     plt.savefig("./Images/ModelEval"+topo+".pdf", bbox_extra_artists=(lgd,), bbox_inches='tight')
     #plt.show()
 
+
+
+#  python evaluate_DQN.py -d ./Logs/expsample_DQN_agentLogs.txt
