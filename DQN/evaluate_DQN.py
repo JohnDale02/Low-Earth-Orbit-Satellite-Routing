@@ -159,7 +159,7 @@ class DQNAgent:
         self.epsilon_min = 0.01
         self.epsilon_decay = 0.995
         self.writer = None
-        self.K = 5   # MODIFIED FROM 4
+        self.K = 4 
         self.listQValues = None
         self.action = None
         self.capacity_feature = None
@@ -658,6 +658,7 @@ if __name__ == "__main__":
 
     #DQN
     mean = np.mean(rewards_dqn) 
+    print(rewards_dqn)
     means_dqn.fill(mean)
     plt.plot(means_dqn, 'r', linestyle="-.")
 

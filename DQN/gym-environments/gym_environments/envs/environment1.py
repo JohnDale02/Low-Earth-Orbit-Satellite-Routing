@@ -122,8 +122,7 @@ def generate_nx_graph(topology):
         G.get_edge_data(i, j)["capacity"] = float(200)     # BANDWIDTH FOR ALL EDGES SET TO 200 
         G.get_edge_data(i, j)['bw_allocated'] = 0
         incId = incId + 1
-
-    print("RETURNING G")
+        
     return G
 
 
@@ -274,7 +273,7 @@ class Env1(gym.Env):
         self.between_feature = np.zeros(self.numEdges)
 
         position = 0
-        print("DOWN HERE")
+
         for edge in self.ordered_edges:
             # adding all the edge state (betweeness, capacity to graph_state)
             # creating an itital state
@@ -299,7 +298,7 @@ class Env1(gym.Env):
         # FOR OUR EXPERIMENT WE WILL PICK 6 RANDOMLY
         self.nodes = list(range(0,self.numNodes))
 
-    def utility_function(self, bw, delay, alpha=0.9, lambda_weight=1.0):
+    def utility_function(self, bw, delay, alpha=0.9, lambda_weight=.9):
         U_bw = (bw ** (1 - alpha)) / (1 - alpha)
         U_delay = (delay ** (1 - alpha)) / (1 - alpha)
         return U_bw - lambda_weight * U_delay
@@ -376,6 +375,8 @@ class Env1(gym.Env):
         self.bw = 0
         self.delay = 0
         self.graph_state = np.copy(self.initial_state)
+        self.demand = random.choice(self.listofDemands)
+
         self.subset_nodes = random.sample(self.nodes, 6)
 
         self.source = random.choice(self.subset_nodes)
