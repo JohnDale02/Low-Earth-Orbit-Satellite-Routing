@@ -13,7 +13,6 @@ import pylab
 import json 
 import gc
 import matplotlib.pyplot as plt
-from .create_iridium_graph import create_iridium_graph
 
 def create_geant2_graph():
     Gbase = nx.Graph()
@@ -55,6 +54,44 @@ def create_gbn_graph():
     return Gbase
 
 
+def create_iridium_graph():
+    # Initialize graph
+    G = nx.Graph()
+    
+    # Parameters
+    num_planes = 2 # Number of orbital planes (6)
+    sats_per_plane = 5  # Number of satellites per orbital plane (11)
+    total_sats = num_planes * sats_per_plane
+    edges = []
+    
+    # Add nodes for each satellite
+    G.add_nodes_from(range(total_sats))
+    
+    # Create edges
+    for plane in range(num_planes):
+        for sat in range(sats_per_plane):
+            # Current satellite index
+            current_sat = plane * sats_per_plane + sat
+            
+            # Intra-plane links
+            next_sat_in_plane = plane * sats_per_plane + (sat + 1) % sats_per_plane
+            edges.append((current_sat, next_sat_in_plane))
+           
+            # Inter-plane links (to adjacent planes)
+            next_plane = (plane + 1) % num_planes
+            prev_plane = (plane - 1) % num_planes  # Wrap-around for the previous plane
+            corresponding_next = next_plane * sats_per_plane + sat
+            corresponding_prev = prev_plane * sats_per_plane + sat
+
+            edges.append((current_sat, corresponding_next))
+            edges.append((current_sat, corresponding_prev))
+    
+    print(edges)
+    G.add_edges_from(edges)
+
+    return G
+
+
 def generate_nx_graph(topology):
     """
     Generate graphs for training with the same topology.
@@ -86,6 +123,7 @@ def generate_nx_graph(topology):
         G.get_edge_data(i, j)['bw_allocated'] = 0
         incId = incId + 1
 
+    print("RETURNING G")
     return G
 
 
@@ -236,7 +274,8 @@ class Env1(gym.Env):
         self.between_feature = np.zeros(self.numEdges)
 
         position = 0
-        for edge in self.ordered_edges:\
+        print("DOWN HERE")
+        for edge in self.ordered_edges:
             # adding all the edge state (betweeness, capacity to graph_state)
             # creating an itital state
             i = edge[0]
@@ -244,7 +283,7 @@ class Env1(gym.Env):
             self.edgesDict[str(i)+':'+str(j)] = position
             self.edgesDict[str(j)+':'+str(i)] = position
             betweenness = (self.graph.get_edge_data(i, j)['betweenness'] - self.mu_bet) / self.std_bet
-            self.graph.get_edge_data(i, j)['betweennes'] = betweenness
+            self.graph.get_edge_data(i, j)['betweenness'] = betweenness
             self.graph_state[position][0] = self.graph.get_edge_data(i, j)["capacity"]
             self.between_feature[position] = self.graph.get_edge_data(i, j)['betweenness']
             position = position + 1
@@ -338,6 +377,8 @@ class Env1(gym.Env):
         self.delay = 0
         self.graph_state = np.copy(self.initial_state)
         self.subset_nodes = random.sample(self.nodes, 6)
+
+        self.source = random.choice(self.subset_nodes)
 
         # We pick a pair of SOURCE,DESTINATION different nodes
         while True:

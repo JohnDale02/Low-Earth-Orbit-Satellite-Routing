@@ -13,5 +13,6 @@ gym_environments/envs/environment1.py
 gym_environments/envs/test1.py
 gym_environments/envs/__pycache__/__init__.cpython-38.pyc
 gym_environments/envs/__pycache__/__init__.cpython-39.pyc
+gym_environments/envs/__pycache__/create_iridium_graph.cpython-38.pyc
 gym_environments/envs/__pycache__/environment1.cpython-38.pyc
 gym_environments/envs/__pycache__/environment1.cpython-39.pyc

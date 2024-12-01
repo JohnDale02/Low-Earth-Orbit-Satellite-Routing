@@ -1,5 +1,6 @@
 import networkx as nx
 
+
 def create_iridium_graph():
     # Initialize graph
     G = nx.Graph()
@@ -8,6 +9,7 @@ def create_iridium_graph():
     num_planes = 6  # Number of orbital planes
     sats_per_plane = 11  # Number of satellites per orbital plane
     total_sats = num_planes * sats_per_plane
+    edges = []
     
     # Add nodes for each satellite
     G.add_nodes_from(range(total_sats))
@@ -20,33 +22,26 @@ def create_iridium_graph():
             
             # Intra-plane links
             next_sat_in_plane = plane * sats_per_plane + (sat + 1) % sats_per_plane
-            G.add_edge(current_sat, next_sat_in_plane)
-            
+            edges.append((current_sat, next_sat_in_plane))
+           
             # Inter-plane links (to adjacent planes)
             next_plane = (plane + 1) % num_planes
             prev_plane = (plane - 1) % num_planes  # Wrap-around for the previous plane
             corresponding_next = next_plane * sats_per_plane + sat
             corresponding_prev = prev_plane * sats_per_plane + sat
-            G.add_edge(current_sat, corresponding_next)
-            G.add_edge(current_sat, corresponding_prev)
+
+            edges.append((current_sat, corresponding_next))
+            edges.append((current_sat, corresponding_prev))
     
+    print(edges)
+    G.add_edges_from(edges)
+
     return G
 
 
 if __name__ == "__main__":
     # Generate the Iridium graph
     iridium_graph = create_iridium_graph()
-
-    # Extract and print all nodes
-    nodes = list(iridium_graph.nodes)
-    print("Nodes:")
-    print(nodes)
-
-    # Extract and print all edges
-    edges = list(iridium_graph.edges)
-    print("\nEdges (source, destination):")
-    for edge in edges:
-        print(edge)
 
     # Visualization (optional)
     try:

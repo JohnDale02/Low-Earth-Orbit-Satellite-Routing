@@ -31,7 +31,7 @@ NUMBER_EPISODES = 50
 NUM_SAMPLES_EPSD = 100
 
 # Set evaluation topology
-graph_topology = 0 # 0==NSFNET, 1==GEANT2, 2==Small Topology, 3==GBN, 4 == Iridium (66 satellites, 6 orbits)
+graph_topology = 4 # 0==NSFNET, 1==GEANT2, 2==Small Topology, 3==GBN, 4 == Iridium (66 satellites, 6 orbits)
 listofDemands = [16, 32, 64]
 
 
@@ -600,14 +600,7 @@ if __name__ == "__main__":
 
     #rewards_lb.tofile('rewards_lb'+topo+'1K.dat')
     #rewards_dqn.tofile('rewards_dqn'+topo+'1K.dat')
-    # Compute averages
-    sap_avg = np.mean(sap_bw_list)
-    lb_avg = np.mean(lb_bw_list)
-    dqn_avg = np.mean(dqn_bw_list)
-
-    sap_avg_delay = np.mean(sap_delay_list)
-    lb_avg_delay = np.mean(lb_delay_list)
-    dqn_avg_delay = np.mean(dqn_delay_list)
+    # Compute average
 
     print("--------------- BW ----------------")
     print(lb_bw_list)
@@ -619,16 +612,45 @@ if __name__ == "__main__":
     print(sap_delay_list)
     print(dqn_delay_list)
 
-    print(f"SAP BW Avg: {sap_avg}")
-    print(f"LB BW Avg: {lb_avg}")
-    print(f"DQN BW Avg: {dqn_avg}")
+    # Compute averages
+    sap_bw_avg = np.mean(sap_bw_list)
+    lb_bw_avg = np.mean(lb_bw_list)
+    dqn_bw_avg = np.mean(dqn_bw_list)
 
-    print(f"SAP Delay Avg: {sap_avg_delay}")
-    print(f"LB Delay Avg: {lb_avg_delay}")
-    print(f"DQN Delay Avg: {dqn_avg_delay}")
+    sap_delay_avg = np.mean(sap_delay_list)
+    lb_delay_avg = np.mean(lb_delay_list)
+    dqn_delay_avg = np.mean(dqn_delay_list)
 
+    # Create boxplot for bandwidth
+    plt.figure(1, figsize=(10, 6))
+    plt.boxplot([sap_bw_list, lb_bw_list, dqn_bw_list], labels=['SAP', 'LB', 'DQN'], patch_artist=True)
+    plt.axhline(y=sap_bw_avg, color='blue', linestyle='--', label='SAP Avg Bandwidth')
+    plt.axhline(y=lb_bw_avg, color='green', linestyle='--', label='LB Avg Bandwidth')
+    plt.axhline(y=dqn_bw_avg, color='red', linestyle='--', label='DQN Avg Bandwidth')
+    plt.title("Bandwidth Comparison")
+    plt.xlabel("Routing Methods")
+    plt.ylabel("Normalized Bandwidth")
+    plt.legend(loc='upper right')
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.tight_layout()
+    plt.savefig("./Images/ModelEval_Bandwidth"+topo+".png")
 
+    # Create boxplot for delay
+    plt.figure(2, figsize=(10, 6))
+    plt.boxplot([sap_delay_list, lb_delay_list, dqn_delay_list], labels=['SAP', 'LB', 'DQN'], patch_artist=True)
+    plt.axhline(y=sap_delay_avg, color='blue', linestyle='--', label='SAP Avg Delay')
+    plt.axhline(y=lb_delay_avg, color='green', linestyle='--', label='LB Avg Delay')
+    plt.axhline(y=dqn_delay_avg, color='red', linestyle='--', label='DQN Avg Delay')
+    plt.title("Delay Comparison")
+    plt.xlabel("Routing Methods")
+    plt.ylabel("Normalized Delay")
+    plt.legend(loc='upper right')
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+    plt.tight_layout()
+    plt.savefig("./Images/ModelEval_Delay"+topo+".png")
 
+# ----------------------------------------------------------------------------
+    plt.figure(3)
     plt.rcParams.update({'font.size': 12})
     plt.plot(rewards_dqn, 'r', label="DQN")
     plt.plot(rewards_sap, 'b', label="SAP")
@@ -654,7 +676,7 @@ if __name__ == "__main__":
     lgd = plt.legend(loc="lower left", bbox_to_anchor=(0.1, -0.24),
             ncol=4, fancybox=True, shadow=True)
     
-    plt.savefig("./Images/ModelEval"+topo+".pdf", bbox_extra_artists=(lgd,), bbox_inches='tight')
+    plt.savefig("./Images/ModelEval_Score"+topo+".png", bbox_extra_artists=(lgd,), bbox_inches='tight')
     #plt.show()
 
 
