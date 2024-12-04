@@ -13,7 +13,7 @@ ITERATIONS = 10000
 TRAINING_EPISODES = 20
 EVALUATION_EPISODES = 40
 FIRST_WORK_TRAIN_EPISODE = 60
-listofDemands = [8, 32, 64]
+listofDemands = [16, 32, 64]
 
 MULTI_FACTOR_BATCH = 6 # Number of batches used in training
 TAU = 0.08 # Only used in soft weights copy
